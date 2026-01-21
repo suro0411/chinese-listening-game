@@ -3,195 +3,337 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中国語リスニングゲームお会計編</title>
+    <title>中国語数字リスニングゲーム＜お会計編＞</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap');
-        body { font-family: 'M PLUS Rounded 1c', sans-serif; }
+        body { font-family: 'M PLUS Rounded 1c', sans-serif; overflow: hidden; touch-action: manipulation; }
+        .money-glow { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1)); }
+        
+        @keyframes talking {
+            0%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.3); }
+        }
+        .mouth-anim {
+            animation: talking 0.15s infinite;
+        }
+
+        .fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* カスタムスクロールバー（トレイ用） */
+        .tray-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .tray-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .tray-scroll::-webkit-scrollbar-thumb {
+            background: rgba(186, 230, 253, 0.8);
+            border-radius: 10px;
+        }
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-slate-100">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useCallback } = React;
 
-        // --- Lucideの代わりにSVGアイコンを定義 (エラー回避のため) ---
-        const IconPlay = () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
-        const IconVolume = () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>;
-        const IconHome = () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
-        const IconInfo = () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;
-        const IconTrophy = () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"></path></svg>;
+        const IconHome = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
+        const IconInfo = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;
 
-        // --- アセットコンポーネント ---
-        const TapiocaDrink = ({ className = "" }) => (
-            <div className={`relative w-24 h-32 ${className} flex items-center justify-center`}>
-                <div className="absolute top-0 left-[55%] w-2 h-24 bg-red-400 rounded-full -rotate-6 z-0" />
-                <div className="absolute top-12 w-20 h-4 bg-white/90 rounded-full z-20 shadow-sm" />
-                <div className="absolute bottom-0 w-16 h-24 bg-white/30 backdrop-blur-md border-2 border-white/60 rounded-b-2xl overflow-hidden z-10">
-                    <div className="absolute bottom-0 w-full h-4/5 bg-amber-200/50" />
-                    {[...Array(6)].map((_, i) => (
-                        <div key={i} className="absolute bg-slate-800 rounded-full" style={{
-                            width: '10px', height: '10px',
-                            bottom: `${Math.random() * 20 + 5}px`,
-                            left: `${Math.random() * 40 + 5}px`
-                        }} />
-                    ))}
+        const TapiocaDrink = ({ className, color = "#5c4033", strawColor = "#ff6666" }) => (
+            <svg viewBox="0 0 100 120" className={className}>
+                <path d="M25 20 L75 20 L70 100 L30 100 Z" fill="#fff" fillOpacity="0.8" stroke="#ccc" strokeWidth="1" />
+                <path d="M32 95 L68 95 L70 75 L30 75 Z" fill={color} />
+                <circle cx="40" cy="85" r="4" fill="#000" />
+                <circle cx="50" cy="90" r="4" fill="#000" />
+                <circle cx="60" cy="82" r="4" fill="#000" />
+                <circle cx="45" cy="78" r="4" fill="#000" />
+                <circle cx="55" cy="88" r="4" fill="#000" />
+                <rect x="48" y="5" width="4" height="65" fill={strawColor} rx="2" />
+                <path d="M23 15 L77 15 L80 25 L20 25 Z" fill="#eee" stroke="#ccc" />
+            </svg>
+        );
+
+        const ShopBackground = () => (
+            <div className="absolute inset-x-0 top-0 h-32 flex flex-col overflow-hidden">
+                <div className="flex justify-between mt-6 px-8 w-full z-10">
+                    <div className="w-16 h-24 bg-slate-800 rounded-lg border-2 border-slate-700 flex flex-col items-center p-1 shadow-md">
+                        <TapiocaDrink className="w-8 h-8 mb-1" color="#fcd34d" strawColor="#f87171" />
+                        <div className="w-full h-0.5 bg-slate-600 mb-1" />
+                        <div className="w-4/5 h-1 bg-amber-200 mb-1 opacity-50" />
+                        <div className="w-3/4 h-1 bg-white mb-1 opacity-30" />
+                    </div>
+                    <div className="w-16 h-24 bg-slate-800 rounded-lg border-2 border-slate-700 flex flex-col items-center p-1 shadow-md">
+                        <TapiocaDrink className="w-8 h-8 mb-1" color="#5c4033" strawColor="#60a5fa" />
+                        <div className="w-full h-0.5 bg-slate-600 mb-1" />
+                        <div className="w-4/5 h-1 bg-amber-200 mb-1 opacity-50" />
+                        <div className="w-3/4 h-1 bg-white mb-1 opacity-30" />
+                    </div>
                 </div>
             </div>
         );
 
-        const Clerk = () => (
-            <div className="relative w-48 h-48 flex items-center justify-center group cursor-pointer active:scale-95 transition-transform">
-                <div className="absolute inset-0 bg-yellow-300/20 rounded-full animate-pulse scale-110" />
-                <div className="relative z-10 w-40 h-40 bg-white rounded-full border-8 border-yellow-400 flex flex-col items-center justify-center overflow-hidden shadow-xl">
-                    <div className="absolute top-4 w-28 h-28 bg-orange-100 rounded-full" />
-                    <div className="absolute top-4 w-32 h-16 bg-slate-800 rounded-t-full" />
-                    <div className="absolute top-16 flex gap-8">
-                        <div className="w-3 h-3 bg-slate-800 rounded-full animate-bounce" />
-                        <div className="w-3 h-3 bg-slate-800 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+        const ClerkFace = ({ isSpeaking, onClick }) => (
+            <div className="relative w-32 h-32 flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-transform" onClick={onClick}>
+                <div className="absolute top-4 w-20 h-16 bg-amber-900 rounded-t-full z-10" />
+                <div className="relative w-20 h-20 bg-orange-50 rounded-full border-2 border-amber-100 flex flex-col items-center justify-center z-20 shadow-md">
+                    <div className="flex gap-4 mb-2">
+                        <div className="w-2 h-2 bg-slate-800 rounded-full" />
+                        <div className="w-2 h-2 bg-slate-800 rounded-full" />
                     </div>
-                    <div className="absolute top-22 w-6 h-3 border-b-4 border-rose-400 rounded-full" />
-                    <div className="absolute bottom-0 w-full h-12 bg-sky-500 border-t-4 border-white flex justify-center pt-2">
-                        <div className="w-16 h-4 bg-white/30 rounded-full" />
-                    </div>
-                </div>
-                <div className="absolute -top-4 -right-4 bg-white p-3 rounded-2xl shadow-lg border-2 border-yellow-400 font-bold text-slate-700 animate-bounce">
-                   听！(聞いて!)
+                    <div className={`w-6 h-3 bg-rose-300 rounded-full ${isSpeaking ? 'mouth-anim' : 'h-1'}`} />
                 </div>
             </div>
         );
 
-        const ShopHeader = () => (
-            <div className="absolute top-0 left-0 right-0 h-32 bg-yellow-400 flex shadow-lg z-0">
-                {[...Array(8)].map((_, i) => (
-                    <div key={i} className="flex-1 h-32 border-r border-yellow-500/30 relative">
-                        <div className="absolute -bottom-4 left-0 right-0 h-8 bg-yellow-400 rounded-b-full shadow-md" />
-                    </div>
-                ))}
-            </div>
-        );
+        const MoneyAsset = ({ value, onClick, region, isSmall = false }) => {
+            const isNote = region === 'china' ? true : value >= 100;
+            const getColor = (v) => {
+                if (v >= 5000) return 'bg-purple-200 border-purple-400 text-purple-700';
+                if (v >= 1000) return 'bg-indigo-100 border-indigo-400 text-indigo-700';
+                if (v >= 500) return 'bg-orange-100 border-orange-400 text-orange-700';
+                if (v >= 100) return 'bg-rose-100 border-rose-400 text-rose-700';
+                if (v >= 50) return 'bg-emerald-100 border-emerald-400 text-emerald-700';
+                if (v >= 10) return 'bg-sky-100 border-sky-400 text-sky-700';
+                return 'bg-amber-100 border-amber-400 text-amber-700';
+            };
+            const colorClasses = getColor(value);
+            
+            // トレイの中でも大きく表示
+            const sizeClass = isNote ? 'w-20 h-10 rounded-md' : 'w-12 h-12 rounded-full';
+            const textClass = 'text-xs sm:text-sm font-black';
 
-        // --- メインコンポーネント ---
+            return (
+                <div onClick={() => onClick(value)} className={`${sizeClass} ${colorClasses.split(' ').slice(0,2).join(' ')} border flex items-center justify-center cursor-pointer shadow-sm hover:scale-105 active:scale-95 transition-all money-glow relative overflow-hidden flex-shrink-0`}>
+                    <span className={`${colorClasses.split(' ')[2]} ${textClass}`}>{value.toLocaleString()}</span>
+                </div>
+            );
+        };
+
         const App = () => {
             const [gameState, setGameState] = useState('title');
             const [region, setRegion] = useState('china');
+            const [gameMode, setGameMode] = useState('challenge');
             const [targetAmount, setTargetAmount] = useState(0);
             const [currentTray, setCurrentTray] = useState([]);
+            const [score, setScore] = useState(0);
+            const [round, setRound] = useState(1);
+            const [isSpeaking, setIsSpeaking] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            const [showHelp, setShowHelp] = useState(false);
 
-            const denominations = {
-                china: [100, 50, 20, 10, 5, 1],
-                taiwan: [1000, 500, 100, 50, 10, 5, 1]
-            };
-
-            const startGame = (r) => {
-                setRegion(r);
-                const amount = Math.floor(Math.random() * 999) + 1;
-                setTargetAmount(amount);
-                setCurrentTray([]);
-                setGameState('playing');
-                setTimeout(() => speak(amount, r), 500);
-            };
+            const denominations = gameMode === 'challenge' 
+                ? [1, 5, 10, 20, 50, 100, 500] 
+                : [1, 5, 10, 20, 50, 100, 500, 1000, 5000];
 
             const speak = (amount, r = region) => {
                 window.speechSynthesis.cancel();
                 const msg = new SpeechSynthesisUtterance(`一共是${amount}元`);
                 msg.lang = r === 'china' ? 'zh-CN' : 'zh-TW';
                 msg.rate = 0.8;
+                msg.onstart = () => setIsSpeaking(true);
+                msg.onend = () => setIsSpeaking(false);
                 window.speechSynthesis.speak(msg);
             };
 
-            const addToTray = (val) => setCurrentTray([...currentTray, val]);
-            const removeFromTray = (idx) => setCurrentTray(currentTray.filter((_, i) => i !== idx));
-            const currentSum = currentTray.reduce((a, b) => a + b, 0);
+            const generateNewRound = (r = region, curRound = round) => {
+                setFeedback(null);
+                let min = 1, max = 99;
+                if (gameMode === 'challenge') {
+                    if (curRound >= 8) { max = 999; min = 500; }
+                    else if (curRound >= 6) { max = 499; min = 100; }
+                    else if (curRound >= 4) { max = 99; min = 10; }
+                    else { max = 10; min = 1; }
+                } else {
+                    max = 9999; min = 1;
+                }
+                const newAmount = Math.floor(Math.random() * (max - min + 1)) + min;
+                setTargetAmount(newAmount);
+                setCurrentTray([]);
+                setTimeout(() => speak(newAmount, r), 600);
+            };
+
+            const handleCheck = () => {
+                const sum = currentTray.reduce((a, b) => a + b, 0);
+                const isCorrect = sum === targetAmount;
+                if (isCorrect) {
+                    setFeedback({ type: 'success', text: '太棒了！(正解！)' });
+                    setScore(s => s + 1);
+                } else {
+                    setFeedback({ type: 'fail', text: `不对哦… 正解は ${targetAmount.toLocaleString()} 元` });
+                }
+                setTimeout(() => {
+                    const maxRounds = gameMode === 'challenge' ? 10 : 50;
+                    if (isCorrect) {
+                        if (round >= maxRounds) setGameState('result');
+                        else {
+                            const n = round + 1; setRound(n); generateNewRound(region, n);
+                        }
+                    } else {
+                        if (gameMode === 'challenge') {
+                            if (round >= 10) setGameState('result');
+                            else {
+                                const n = round + 1; setRound(n); generateNewRound(region, n);
+                            }
+                        } else {
+                            setGameState('result');
+                        }
+                    }
+                }, 2000);
+            };
 
             if (gameState === 'title') {
                 return (
-                    <div className="h-screen w-full max-w-md mx-auto relative bg-sky-50 overflow-hidden flex flex-col items-center justify-center p-6">
-                        <ShopHeader />
-                        <div className="z-10 text-center">
-                            <h1 className="text-4xl font-black text-sky-900 mb-2 drop-shadow-sm">中国語金額</h1>
-                            <p className="text-xl font-bold text-sky-600 mb-12">リスニング修行</p>
-                            <div className="relative mb-12">
-                                <TapiocaDrink className="mx-auto scale-125" />
-                                <div className="absolute -bottom-4 -right-4 bg-yellow-400 p-2 rounded-full rotate-12 shadow-lg">
-                                    <span className="text-white text-xs font-black">好喝!</span>
+                    <div className="h-screen w-full max-w-md mx-auto relative bg-sky-50 flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+                        <div className="z-10 flex flex-col items-center">
+                            <h1 className="text-2xl font-black text-sky-900 leading-tight">中国語数字リスニングゲーム<br/>＜お会計編＞</h1>
+                            <div className="my-10">
+                                <TapiocaDrink className="w-40 h-40 drop-shadow-xl" />
+                            </div>
+                            <button onClick={() => setGameState('regionSelect')} className="bg-sky-500 hover:bg-sky-600 text-white font-black text-2xl px-16 py-4 rounded-3xl shadow-xl transition-transform active:scale-95 mb-6 w-full max-w-xs">
+                                スタート
+                            </button>
+                            <button onClick={() => setShowHelp(true)} className="flex items-center gap-2 text-sky-600 font-bold hover:underline transition-all">
+                                <IconInfo /> 遊び方
+                            </button>
+                        </div>
+
+                        {showHelp && (
+                            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6">
+                                <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl relative fade-in">
+                                    <h3 className="text-xl font-black text-sky-900 mb-4">遊び方</h3>
+                                    <div className="text-left space-y-4 text-sm font-bold text-slate-600">
+                                        <p>1. 店員さんが言う合計金額を聞き取ります。</p>
+                                        <p>2. 下のお金を選んでトレイに置きます。</p>
+                                        <p>3. 「支払う」ボタンを押して答え合わせ！</p>
+                                    </div>
+                                    <button onClick={() => setShowHelp(false)} className="mt-8 w-full bg-slate-800 text-white font-black py-3 rounded-2xl shadow-lg">とじる</button>
                                 </div>
                             </div>
-                            <div className="space-y-4 w-64">
-                                <button onClick={() => startGame('china')} className="w-full bg-red-500 hover:bg-red-600 text-white font-black py-4 rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-transform active:scale-95">
-                                    <IconPlay /> 大陸モード (人民元)
-                                </button>
-                                <button onClick={() => startGame('taiwan')} className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-transform active:scale-95">
-                                    <IconPlay /> 台湾モード (TWD)
-                                </button>
-                            </div>
-                        </div>
-                        <div className="absolute bottom-8 text-sky-300 font-bold flex gap-4">
-                            <div className="flex items-center gap-1"><IconInfo /> 遊び方</div>
-                            <div className="flex items-center gap-1"><IconTrophy /> ランキング</div>
+                        )}
+                    </div>
+                );
+            }
+
+            if (gameState === 'regionSelect' || gameState === 'modeSelect') {
+                const isRegion = gameState === 'regionSelect';
+                return (
+                    <div className="h-screen w-full max-w-md mx-auto relative bg-sky-50 flex flex-col items-center justify-center p-6">
+                        <h2 className="text-2xl font-black text-sky-900 z-10 mb-8">{isRegion ? 'どこでお買い物する？' : 'ゲームモードを選択'}</h2>
+                        <div className="grid gap-6 w-full z-10 px-4">
+                            {isRegion ? (
+                                <>
+                                    <button onClick={() => { setRegion('china'); setGameState('modeSelect'); }} className="bg-white p-6 rounded-3xl shadow-lg border-4 border-transparent hover:border-red-400 transition-all flex items-center gap-6 text-left">
+                                        <div className="text-4xl">🇨🇳</div>
+                                        <div><div className="font-black text-xl text-slate-800">中国大陸</div><div className="text-sm text-slate-500">通貨：人民元 (元/¥)</div></div>
+                                    </button>
+                                    <button onClick={() => { setRegion('taiwan'); setGameState('modeSelect'); }} className="bg-white p-6 rounded-3xl shadow-lg border-4 border-transparent hover:border-emerald-400 transition-all flex items-center gap-6 text-left">
+                                        <div className="text-4xl">🇹🇼</div>
+                                        <div><div className="font-black text-xl text-slate-800">台湾</div><div className="text-sm text-slate-500">通貨：台湾ドル (元/NT$)</div></div>
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button onClick={() => { setGameMode('challenge'); setGameState('playing'); setRound(1); setScore(0); generateNewRound(region, 1); }} className="bg-white p-6 rounded-3xl shadow-lg border-4 border-sky-400 flex items-center gap-6 text-left">
+                                        <div className="bg-sky-100 p-3 rounded-2xl text-sky-500 font-black">10</div>
+                                        <div><div className="font-black text-xl text-slate-800">10問チャレンジ</div></div>
+                                    </button>
+                                    <button onClick={() => { setGameMode('survival'); setGameState('playing'); setRound(1); setScore(0); generateNewRound(region, 1); }} className="bg-white p-6 rounded-3xl shadow-lg border-4 border-rose-400 flex items-center gap-6 text-left">
+                                        <div className="bg-rose-100 p-3 rounded-2xl text-rose-500">🔥</div>
+                                        <div><div className="font-black text-xl text-slate-800">サバイバル</div><div className="text-sm text-slate-500">一問ミスで終了！最大50問。</div></div>
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 );
             }
 
-            return (
-                <div className="h-screen w-full max-w-md mx-auto relative bg-sky-50 overflow-hidden flex flex-col">
-                    <div className="p-4 z-20 flex justify-between items-center">
-                        <button onClick={() => setGameState('title')} className="bg-white/80 p-2 rounded-full shadow-sm text-sky-600"><IconHome /></button>
-                        <div className="bg-white/80 px-4 py-1 rounded-full shadow-sm font-black text-sky-900">
-                            {region === 'china' ? '🇨🇳 人民元' : '🇹🇼 台湾ドル'}
+            if (gameState === 'playing') {
+                const currentSum = currentTray.reduce((a, b) => a + b, 0);
+                return (
+                    <div className="h-screen w-full max-w-md mx-auto bg-sky-50 flex flex-col overflow-hidden relative">
+                        <ShopBackground />
+                        <div className="p-3 flex justify-between items-center z-30">
+                            <button onClick={() => setGameState('title')} className="p-2 bg-white/80 rounded-full shadow text-sky-600"><IconHome /></button>
+                            <div className="bg-white/80 px-4 py-1 rounded-full font-black text-sky-900 shadow-sm text-xs">
+                                {gameMode === 'challenge' ? `第 ${round} / 10 問` : `第 ${round} / 50 問 (スコア: ${score})`}
+                            </div>
+                            <div className="w-10"></div>
                         </div>
-                        <div className="w-8"></div>
-                    </div>
-
-                    <div className="flex-grow flex flex-col items-center justify-center px-6 relative">
-                        <ShopHeader />
-                        <div className="mt-12" onClick={() => speak(targetAmount)}>
-                            <Clerk />
-                        </div>
-                        <div className="mt-8 w-full bg-white/60 backdrop-blur-md rounded-3xl p-4 border-4 border-dashed border-sky-200 min-h-[100px] flex flex-wrap gap-2 items-center justify-center shadow-inner">
-                            {currentTray.map((v, i) => (
-                                <div key={i} onClick={() => removeFromTray(i)} className="bg-orange-400 text-white font-bold px-3 py-1 rounded-lg shadow-sm cursor-pointer hover:bg-red-400">
-                                    {v}
+                        <div className="flex-grow flex flex-col items-center justify-start pt-4 px-2 z-20 relative">
+                            <ClerkFace isSpeaking={isSpeaking} onClick={() => speak(targetAmount)} />
+                            {feedback && (
+                                <div className={`absolute top-4 px-6 py-2 rounded-2xl font-black text-lg shadow-xl fade-in z-50 text-center max-w-[90%] ${feedback.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                                    {feedback.text}
                                 </div>
-                            ))}
-                            {currentTray.length === 0 && <p className="text-sky-300 font-bold">ここに金額を並べる</p>}
+                            )}
+                            
+                            {/* 固定サイズ・スクロール可能なトレイ */}
+                            <div className="w-full mt-2 h-44 bg-white/60 backdrop-blur-sm border-4 border-dashed border-sky-200 rounded-3xl p-4 shadow-inner relative overflow-hidden">
+                                <div className="w-full h-full overflow-y-auto tray-scroll pr-1">
+                                    <div className="flex flex-wrap gap-3 content-start items-center justify-center min-h-full">
+                                        {currentTray.length === 0 ? (
+                                            <p className="text-sky-300 font-bold text-xs self-center">店員さんをタップして金額を聞こう</p>
+                                        ) : (
+                                            currentTray.map((v, i) => (
+                                                <div key={i} onClick={() => { if(!feedback) setCurrentTray(currentTray.filter((_, idx) => idx !== i)) }}>
+                                                    <MoneyAsset value={v} onClick={() => {}} region={region} isSmall={true} />
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-
-                    <div className="bg-white rounded-t-[3rem] p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-20">
-                        <div className="flex justify-between items-center mb-6 px-2">
-                            <div className="text-slate-500 font-bold">合計: <span className="text-4xl font-black text-sky-600">{currentSum}</span> 元</div>
-                            <button 
-                                onClick={() => {
-                                    if(currentSum === targetAmount) {
-                                        alert("太棒了！正解です！");
-                                        startGame(region);
-                                    } else {
-                                        alert(`残念！正解は ${targetAmount} 元でした。`);
-                                        startGame(region);
-                                    }
-                                }}
-                                className="bg-sky-600 text-white px-8 py-3 rounded-full font-black text-lg shadow-lg active:scale-95 transition-transform"
-                            >
-                                支払う
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 mb-4">
-                            {denominations[region].map(v => (
-                                <button key={v} onClick={() => addToTray(v)} className="bg-slate-100 hover:bg-sky-100 py-3 rounded-2xl font-black text-slate-700 shadow-sm border-b-4 border-slate-300 active:border-b-0 active:translate-y-1 transition-all">
-                                    {v}
+                        <div className="bg-white rounded-t-[2.5rem] p-4 shadow-2xl z-30 mt-auto border-t-4 border-sky-100">
+                            <div className="flex justify-between items-end mb-4 px-2">
+                                <div>
+                                    <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wider">支払う金額</span>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-3xl font-black text-sky-600 leading-none">{currentSum.toLocaleString()}</span>
+                                        <span className="text-slate-600 font-bold text-sm">元</span>
+                                    </div>
+                                </div>
+                                <button onClick={handleCheck} className="bg-sky-500 text-white font-black text-base px-10 py-3 rounded-full shadow-lg active:scale-95 transition-transform disabled:opacity-50" disabled={currentSum === 0 || feedback !== null}>
+                                    支払う
                                 </button>
-                            ))}
+                            </div>
+                            <div className={`grid gap-2 ${denominations.length <= 7 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                                {denominations.map(v => (
+                                    <MoneyAsset key={v} value={v} onClick={(val) => { if(!feedback) setCurrentTray([...currentTray, val])}} region={region} />
+                                ))}
+                            </div>
+                            <button onClick={() => { if(!feedback) setCurrentTray([]) }} className="w-full mt-2 text-slate-300 font-bold text-[10px] hover:text-red-400 py-1 uppercase tracking-widest">Clear All</button>
                         </div>
-                        <button onClick={() => setCurrentTray([])} className="w-full text-slate-400 font-bold py-2 hover:text-red-400 transition-colors">クリア</button>
                     </div>
-                </div>
-            );
+                );
+            }
+
+            if (gameState === 'result') {
+                return (
+                    <div className="h-screen w-full max-w-md mx-auto bg-sky-50 flex flex-col items-center justify-center p-8">
+                        <div className="bg-white rounded-[3rem] shadow-2xl p-10 w-full text-center z-10 border-8 border-sky-100">
+                            <h2 className="text-3xl font-black text-sky-900 mb-6">結果発表！</h2>
+                            <div className="text-xl font-bold text-slate-500 mb-2">{gameMode === 'challenge' ? '正解数' : '最終スコア'}</div>
+                            <div className="text-7xl font-black text-rose-500 mb-4">{score}</div>
+                            <div className="space-y-4 mt-8">
+                                <button onClick={() => setGameState('title')} className="w-full bg-sky-500 text-white font-black py-4 rounded-2xl shadow-lg">タイトルへ戻る</button>
+                                <button onClick={() => { setRound(1); setScore(0); setGameState('playing'); generateNewRound(region, 1); }} className="w-full bg-emerald-500 text-white font-black py-4 rounded-2xl shadow-lg">もう一度挑戦</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
