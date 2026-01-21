@@ -1,12 +1,50 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Play, Volume2, RotateCcw, Home, Info, Trophy, CheckCircle, XCircle, Wallet, ArrowRight, Coins, MapPin, Globe, Coffee, Star, Heart, ClipboardList } from 'lucide-react';
+import { 
+  Play, 
+  Volume2, 
+  RotateCcw, 
+  Home, 
+  Info, 
+  Trophy, 
+  CheckCircle, 
+  XCircle, 
+  Wallet, 
+  ArrowRight, 
+  Coins, 
+  MapPin, 
+  Globe, 
+  Coffee, 
+  Star, 
+  Heart, 
+  ClipboardList 
+} from 'lucide-react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, User as FirebaseUser, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  onAuthStateChanged, 
+  User as FirebaseUser, 
+  signInWithCustomToken 
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  query, 
+  orderBy, 
+  limit, 
+  onSnapshot, 
+  serverTimestamp 
+} from 'firebase/firestore';
 
 // --- Firebase Initialization ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// 環境変数やグローバル変数から設定を取得します
+const firebaseConfig = typeof (window as any).__firebase_config !== 'undefined' 
+  ? JSON.parse((window as any).__firebase_config) 
+  : {};
+const appId = typeof (window as any).__app_id !== 'undefined' 
+  ? (window as any).__app_id 
+  : 'default-app-id';
 
 let db: any;
 let auth: any;
@@ -41,7 +79,6 @@ interface RegionConfig {
 
 const CHINA_DENOMINATIONS = [1, 5, 10, 20, 50, 100, 200, 500];
 const TAIWAN_DENOMINATIONS = [1, 5, 10, 50, 100, 200, 500, 1000, 2000];
-
 const SURVIVAL_EXTRA = [1000, 5000, 10000, 50000];
 
 const REGION_CONFIGS: Record<string, RegionConfig> = {
@@ -99,13 +136,11 @@ const TAIWAN_STYLES: Record<number, string> = {
   50000: 'bill bg-slate-900 text-white border-black',
 };
 
-// --- Components ---
+// --- Sub Components ---
 
 const MenuBoard = ({ className = "" }: { className?: string }) => (
   <div className={`relative w-28 h-36 bg-slate-800 border-4 border-amber-900 rounded-lg shadow-2xl p-2 flex flex-col items-center gap-1 ${className}`}>
     <div className="w-full h-1 bg-amber-800/50 rounded-full mb-1" />
-    
-    {/* ミニ・タピオカドリンクのイラスト */}
     <div className="relative w-10 h-14 my-1">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-12 bg-red-400/80 rounded-full z-0" />
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-12 bg-white/40 border border-white/30 rounded-b-lg z-10 overflow-hidden">
@@ -116,7 +151,6 @@ const MenuBoard = ({ className = "" }: { className?: string }) => (
       </div>
       <div className="absolute top-1 left-1/2 -translate-x-1/2 w-9 h-2 bg-white/80 rounded-full z-20 shadow-sm" />
     </div>
-
     <div className="w-full flex justify-between px-1">
       <div className="w-8 h-1 bg-white/20 rounded" />
       <div className="w-4 h-1 bg-yellow-400/40 rounded" />
@@ -125,7 +159,6 @@ const MenuBoard = ({ className = "" }: { className?: string }) => (
       <div className="w-10 h-1 bg-white/20 rounded" />
       <div className="w-3 h-1 bg-yellow-400/40 rounded" />
     </div>
-    
     <div className="mt-auto mb-1 flex gap-1">
         <div className="w-2 h-2 rounded-full bg-red-400/60" />
         <div className="w-2 h-2 rounded-full bg-sky-400/60" />
@@ -222,7 +255,7 @@ const Money = ({ value, region, onClick, size = 'md' }: { value: number; region:
   }
 };
 
-// --- Main App ---
+// --- Main Component ---
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>('title');
@@ -245,8 +278,9 @@ export default function App() {
   useEffect(() => {
     if (!auth) return;
     const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
+      const customToken = (window as any).__initial_auth_token;
+      if (typeof customToken !== 'undefined' && customToken) {
+        await signInWithCustomToken(auth, customToken);
       } else {
         await signInAnonymously(auth);
       }
@@ -270,26 +304,6 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
 
-  const submitScore = async () => {
-    if (!db || !user || !playerName.trim()) return;
-    setIsSubmittingScore(true);
-    try {
-      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), {
-        name: playerName.trim(),
-        score: score,
-        region: region,
-        uid: user.uid,
-        createdAt: serverTimestamp()
-      });
-      setHasSubmitted(true);
-      localStorage.setItem('playerName', playerName.trim());
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsSubmittingScore(false);
-    }
-  };
-
   useEffect(() => {
     const savedName = localStorage.getItem('playerName');
     if (savedName) setPlayerName(savedName);
@@ -305,6 +319,7 @@ export default function App() {
     utterance.onerror = () => setIsSpeaking(false);
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
+    // フォールバック
     setTimeout(() => setIsSpeaking(false), 5000);
   }, [region]);
 
@@ -351,11 +366,6 @@ export default function App() {
     setCurrentTray(prev => prev.filter((_, i) => i !== index));
   };
 
-  const clearTray = () => {
-    if (feedback !== null) return;
-    setCurrentTray([]);
-  };
-
   const checkAnswer = () => {
     if (!region) return;
     const currentTotal = currentTray.reduce((a, b) => a + b, 0);
@@ -393,6 +403,26 @@ export default function App() {
     }
   };
 
+  const submitScore = async () => {
+    if (!db || !user || !playerName.trim()) return;
+    setIsSubmittingScore(true);
+    try {
+      await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), {
+        name: playerName.trim(),
+        score: score,
+        region: region,
+        uid: user.uid,
+        createdAt: serverTimestamp()
+      });
+      setHasSubmitted(true);
+      localStorage.setItem('playerName', playerName.trim());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSubmittingScore(false);
+    }
+  };
+
   const getScoreMessage = (score: number) => {
     if (score >= 45) return { phrase: "太牛了！", text: "驚異的なリスニング力！現地で店長を任せられるレベルです。" };
     if (score >= 30) return { phrase: "太棒了！", text: "素晴らしい！高額な会計も迷わずこなせていますね。" };
@@ -401,8 +431,6 @@ export default function App() {
     return { phrase: "加油！", text: "まずは短い数字から。繰り返し挑戦して耳を慣らしていきましょう！" };
   };
 
-  // --- Computed Options ---
-  // Fix: Unique list of denominations to prevent duplicate keys in UI
   const availableDenominations = useMemo(() => {
     if (!region) return [];
     const config = REGION_CONFIGS[region];
@@ -523,7 +551,7 @@ export default function App() {
             ))}
             {currentTray.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-[10px] font-medium text-center px-4 italic">トレイのお金をタップして戻す</div>}
             {currentTray.length > 0 && (
-              <button onClick={clearTray} className="absolute bottom-1 right-1 bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full text-[9px] font-bold active:bg-slate-300">クリア</button>
+              <button onClick={() => setCurrentTray([])} className="absolute bottom-1 right-1 bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full text-[9px] font-bold active:bg-slate-300">クリア</button>
             )}
           </div>
 
@@ -593,7 +621,7 @@ export default function App() {
       <div className="flex-grow overflow-y-auto p-4 space-y-3 z-10">
         {leaderboard.length === 0 ? <div className="text-center text-slate-400 py-20 font-bold italic bg-white/40 rounded-3xl">データを読み込み中...</div> : 
           leaderboard.map((entry, idx) => (
-          <div key={`rank-${idx}-${entry.id || idx}`} className="flex items-center p-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-sm border-2 border-sky-50 transition-all hover:scale-[1.02]">
+          <div key={`rank-${idx}`} className="flex items-center p-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-sm border-2 border-sky-50 transition-all hover:scale-[1.02]">
             <div className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-black mr-3 ${idx === 0 ? 'bg-yellow-400 text-yellow-900 shadow-md ring-2 ring-yellow-200' : idx === 1 ? 'bg-slate-200 text-slate-600' : idx === 2 ? 'bg-orange-100 text-orange-700' : 'bg-sky-50 text-sky-400'}`}>{idx + 1}</div>
             <div className="flex-1 font-black text-slate-700 text-sm truncate">{entry.name}</div>
             <div className="text-xl font-black text-sky-600 tabular-nums">{entry.score}</div>
