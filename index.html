@@ -46,7 +46,7 @@
         const { useState, useEffect, useCallback } = React;
 
         const IconHome = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
-        const IconInfo = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;
+        const IconInfo = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" cy="16" x2="12" y2="12"></line><line x1="12" cy="12" x2="12.01" y2="12"></line></svg>;
 
         const TapiocaDrink = ({ className, color = "#5c4033", strawColor = "#ff6666" }) => (
             <svg viewBox="0 0 100 120" className={className}>
@@ -95,9 +95,9 @@
         );
 
         const MoneyAsset = ({ value, onClick, region }) => {
-            const isNote = region === 'china' ? true : value >= 100;
+            const isNote = region === 'china' ? value >= 10 : value >= 100;
             const getColor = (v) => {
-                if (v >= 5000) return 'bg-purple-200 border-purple-400 text-purple-700';
+                if (v >= 2000) return 'bg-purple-200 border-purple-400 text-purple-700';
                 if (v >= 1000) return 'bg-indigo-100 border-indigo-400 text-indigo-700';
                 if (v >= 500) return 'bg-orange-100 border-orange-400 text-orange-700';
                 if (v >= 100) return 'bg-rose-100 border-rose-400 text-rose-700';
@@ -129,7 +129,9 @@
             const [feedback, setFeedback] = useState(null);
             const [showHelp, setShowHelp] = useState(false);
 
-            const denominations = [1, 5, 10, 20, 50, 100, 500, 1000, 5000];
+            const denominations = region === 'china' 
+                ? [1, 5, 10, 20, 50, 100, 500, 1000, 5000] 
+                : [1, 5, 10, 50, 100, 500, 1000, 2000];
 
             const speak = (amount, r = region) => {
                 window.speechSynthesis.cancel();
@@ -146,15 +148,12 @@
                 let min = 1, max = 99;
 
                 if (gameMode === 'challenge') {
-                    // 10問チャレンジ: 7問目まで2桁。8問目以降3桁。
                     if (curRound <= 7) {
                         min = 10; max = 99;
                     } else {
                         min = 100; max = 999;
                     }
                 } else {
-                    // サバイバル
-                    // 10問目まで2桁、11から20問目が3桁、21から30問目が4桁、31問目以降が2～4桁のランダム
                     if (curRound <= 10) {
                         min = 10; max = 99;
                     } else if (curRound <= 20) {
@@ -162,7 +161,6 @@
                     } else if (curRound <= 30) {
                         min = 1000; max = 9999;
                     } else {
-                        // 31問目以降: 2~4桁のランダム
                         const digits = [10, 100, 1000][Math.floor(Math.random() * 3)];
                         min = digits;
                         max = digits * 10 - 1;
@@ -340,7 +338,7 @@
                                     支払う
                                 </button>
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="flex flex-wrap justify-center gap-2">
                                 {denominations.map(v => (
                                     <MoneyAsset key={v} value={v} onClick={(val) => { if(!feedback) setCurrentTray([...currentTray, val])}} region={region} />
                                 ))}
