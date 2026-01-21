@@ -146,25 +146,23 @@
                 let min = 1, max = 99;
 
                 if (gameMode === 'challenge') {
-                    // 10問チャレンジ: 7問目まで2桁。8問以降3桁。
+                    // 10問チャレンジ: 7問目まで2桁。8問目以降3桁。
                     if (curRound <= 7) {
                         min = 10; max = 99;
                     } else {
                         min = 100; max = 999;
                     }
                 } else {
-                    // サバイバル: 10問目まで2桁、11から20問目が3桁、21から30問目が4桁、41～50が2～4桁までのランダム
-                    // 31~40の定義がなかったため、徐々に難化させる自然な流れとして31~40も4桁、41以降をランダムに設定
+                    // サバイバル
+                    // 10問目まで2桁、11から20問目が3桁、21から30問目が4桁、31問目以降が2～4桁のランダム
                     if (curRound <= 10) {
                         min = 10; max = 99;
                     } else if (curRound <= 20) {
                         min = 100; max = 999;
                     } else if (curRound <= 30) {
                         min = 1000; max = 9999;
-                    } else if (curRound <= 40) {
-                        min = 1000; max = 9999; // 30台も高難易度維持
                     } else {
-                        // 41~50が2~4桁までのランダム
+                        // 31問目以降: 2~4桁のランダム
                         const digits = [10, 100, 1000][Math.floor(Math.random() * 3)];
                         min = digits;
                         max = digits * 10 - 1;
@@ -210,6 +208,20 @@
                         }
                     }
                 }, 2000);
+            };
+
+            const getScoreMessage = () => {
+                if (gameMode === 'challenge') {
+                    if (score === 10) return "完璧！中国語マスターですね！";
+                    if (score >= 7) return "すごい！聞き取りバッチリです！";
+                    if (score >= 4) return "その調子！どんどん練習しましょう！";
+                    return "まずは1桁から慣れていきましょう！";
+                } else {
+                    if (score >= 40) return "神レベル！お店が開けます！";
+                    if (score >= 25) return "プロ級！桁が増えても余裕ですね！";
+                    if (score >= 10) return "素晴らしい！サバイバル成功！";
+                    return "次は10問突破を目指しましょう！";
+                }
             };
 
             if (gameState === 'title') {
@@ -346,7 +358,10 @@
                             <h2 className="text-3xl font-black text-sky-900 mb-6">結果発表！</h2>
                             <div className="text-xl font-bold text-slate-500 mb-2">{gameMode === 'challenge' ? '正解数' : '最終スコア'}</div>
                             <div className="text-7xl font-black text-rose-500 mb-4">{score}</div>
-                            <div className="space-y-4 mt-8">
+                            <div className="text-lg font-bold text-sky-700 mb-8 bg-sky-50 p-4 rounded-2xl italic">
+                                "{getScoreMessage()}"
+                            </div>
+                            <div className="space-y-4">
                                 <button onClick={() => setGameState('title')} className="w-full bg-sky-500 text-white font-black py-4 rounded-2xl shadow-lg">タイトルへ戻る</button>
                                 <button onClick={() => { setRound(1); setScore(0); setGameState('playing'); generateNewRound(region, 1); }} className="w-full bg-emerald-500 text-white font-black py-4 rounded-2xl shadow-lg">もう一度挑戦</button>
                             </div>
